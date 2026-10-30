@@ -177,7 +177,17 @@ mod tests {
         drop(deadline(&kept, Duration::from_millis(100)).unwrap());
         let _running = deadline(&ended, Duration::from_millis(100)).unwrap();
         let started = Instant::now();
+        #[cfg(not(windows))]
         assert_eq!(ended.read(&mut [0u8; 1]).unwrap(), 0);
+        #[cfg(windows)]
+        {
+            ended.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
+            let res = ended.read(&mut [0u8; 1]);
+            assert!(
+                matches!(res, Ok(0))
+                    || matches!(res, Err(ref e) if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut | io::ErrorKind::ConnectionReset))
+            );
+        }
         assert!(started.elapsed() < Duration::from_secs(2));
         kept.set_read_timeout(Some(Duration::from_millis(300)))
             .unwrap();

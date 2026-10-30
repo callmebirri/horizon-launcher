@@ -5,8 +5,6 @@ edition = "2021"
 license = "MIT"
 description = "Downloads, prepares and starts Horizon builds"
 
-[workspace]
-
 [dependencies]
 gpui = "0.2.2"
 ureq = { version = "2", features = ["json", "tls"], default-features = false }
@@ -76,5 +74,4 @@ winresource = "0.1"
 proc-macro2 = "1"
 syn = "2"
 
-[profile.release]
-strip = true
+
