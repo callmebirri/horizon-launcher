@@ -47,7 +47,9 @@ fn text(out: &Output) -> String {
 fn the_cli_allows_offline_name_and_does_not_refuse_play_with_owner_gate() {
     let root = home("cli");
     // Setting offline name without an owner succeeds:
-    let out = launcher(&root, &["account", "offline", "TestPlayer"]).output().unwrap();
+    let out = launcher(&root, &["account", "offline", "TestPlayer"])
+        .output()
+        .unwrap();
     let said = text(&out);
     assert!(out.status.success(), "{said}");
     assert!(said.contains("TestPlayer"), "{said}");

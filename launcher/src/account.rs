@@ -1368,7 +1368,11 @@ fn java_player_with(
             .into_iter()
             .find_map(|a| Some((a.clone(), secrets_in(store, &a.uuid).filter(|s| s.owns)?)))
     };
-    if let Some((account, secrets)) = pass.as_ref().and_then(|p| p.session.clone().or(p.owner.clone())).or_else(kept) {
+    if let Some((account, secrets)) = pass
+        .as_ref()
+        .and_then(|p| p.session.clone().or(p.owner.clone()))
+        .or_else(kept)
+    {
         return Ok(crate::java_launch::Player {
             name: account.name,
             uuid: account.uuid,
