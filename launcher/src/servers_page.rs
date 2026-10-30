@@ -200,7 +200,7 @@ pub(super) struct Servers {
     /// A suggested value shown selected: the first key typed replaces it.
     selected: Option<Field>,
     /// A field whose value was refused, and why: shown under it until it's edited.
-    invalid: Option<(Field, &'static str)>,
+    pub(super) invalid: Option<(Field, &'static str)>,
     copied: Option<Instant>,
     faces: HashMap<String, Option<Vec<[u8; 4]>>>,
     tx: Sender<Event>,

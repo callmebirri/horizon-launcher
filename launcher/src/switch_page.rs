@@ -28,7 +28,10 @@ impl Launcher {
             .play_as_with(account::store(), who, self.settings.dev_offline)
             .and_then(|()| accounts.save());
         match done {
-            Ok(()) => self.accounts = accounts,
+            Ok(()) => {
+                self.accounts = accounts;
+                self.sign_in_state = None;
+            }
             Err(e) => self.sign_in_state = Some(SignInState::Done(Err(e))),
         }
         self.account_menu = false;
@@ -143,6 +146,7 @@ impl Launcher {
         self.play_as(Player::Offline(name));
         if !matches!(self.sign_in_state, Some(SignInState::Done(Err(_)))) {
             self.servers.text(Field::OfflineName).set(String::new());
+            self.servers.invalid = None;
         }
     }
 
