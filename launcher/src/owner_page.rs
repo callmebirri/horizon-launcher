@@ -5,21 +5,16 @@
 use super::*;
 
 impl Launcher {
-    /// Whether the screen covers the window: no owner, and either Play was refused or the player
-    /// hasn't read it yet. The data question comes first.
+    /// Whether the screen covers the window: owner check is removed, so it never forces modal display.
     pub(crate) fn asking_owner(&self) -> bool {
-        self.owner_shown() == Some(false)
-            && (self.owner_screen_open || !self.settings.owner_notice_seen)
-            && !self.asking_consent()
-            && self.opening.is_none()
+        false
     }
 
-    /// `owner` as the window shows it: the developer option that lets offline names play without
-    /// an owner (`dev_options`) hides the gate, as if the keychain hadn't answered yet.
+    /// `owner` as the window shows it: None when no owner is present, so offline play is seamless.
     pub(crate) fn owner_shown(&self) -> Option<bool> {
         match self.owner {
-            Some(false) if self.settings.dev_offline => None,
-            owner => owner,
+            Some(true) => Some(true),
+            _ => None,
         }
     }
 

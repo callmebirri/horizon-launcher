@@ -912,9 +912,6 @@ pub enum Player {
     GameName,
 }
 
-const OFFLINE_NEEDS_OWNER: &str =
-    "Offline names need a Microsoft account that owns Minecraft: Java Edition in the launcher.";
-
 /// The secrets an account keeps in `store`, if it still has them there.
 fn secrets_in(store: &dyn SecretStore, uuid: &str) -> Option<Secrets> {
     store
@@ -994,20 +991,17 @@ impl Accounts {
         }
     }
 
-    /// Plays as `who`: an account, an offline name (kept, only beside an account that owns the
-    /// game), or the game's own name.
+    /// Plays as `who`: an account, an offline name, or the game's own name.
     pub fn play_as(&mut self, store: &dyn SecretStore, who: Player) -> Result<(), String> {
-        self.play_as_with(store, who, false)
+        self.play_as_with(store, who, true)
     }
 
-    /// [`Self::play_as`], where `offline_without_owner` (the window's hidden developer option,
-    /// `backend::Settings::dev_offline`) lets an offline name play without an account that owns
-    /// the game.
+    /// [`Self::play_as`].
     pub fn play_as_with(
         &mut self,
-        store: &dyn SecretStore,
+        _store: &dyn SecretStore,
         who: Player,
-        offline_without_owner: bool,
+        _offline_without_owner: bool,
     ) -> Result<(), String> {
         match who {
             Player::Microsoft(uuid) => {
@@ -1017,9 +1011,6 @@ impl Accounts {
                 self.selected = Some(uuid);
             }
             Player::Offline(name) => {
-                if !offline_without_owner && !self.has_owner(store) {
-                    return Err(OFFLINE_NEEDS_OWNER.into());
-                }
                 let name = self.add_offline(&name)?;
                 self.selected = None;
                 self.offline_selected = Some(name);
@@ -1215,19 +1206,18 @@ pub fn launch(
     }
 }
 
-/// The owner gate before the game starts. With the window's hidden developer option
-/// (`backend::Settings::dev_offline`, `offline_without_owner`) no owner is no refusal: the game
-/// starts offline, without a session and without an `owner`. Downloads never come through here:
-/// `backend::download_for_owner` asks [`launch`] itself, so the option never downloads the game.
+/// The owner gate before the game starts. When no owner is found, the game
+/// starts offline without a session and without an `owner`. Downloads never come through here:
+/// `backend::download_for_owner` asks [`launch`] itself, so downloading from Mojang still requires an account.
 pub fn launch_for_game(
     ep: &Endpoints,
     client_id: Option<&str>,
     store: &dyn SecretStore,
     accounts: &mut Accounts,
-    offline_without_owner: bool,
+    _offline_without_owner: bool,
 ) -> Result<Launch, NoOwner> {
     match launch(ep, client_id, store, accounts) {
-        Err(NoOwner) if offline_without_owner => Ok(Launch::default()),
+        Err(NoOwner) => Ok(Launch::default()),
         pass => pass,
     }
 }
@@ -1371,24 +1361,30 @@ fn java_player_with(
     store: &dyn SecretStore,
     accounts: &mut Accounts,
 ) -> Result<crate::java_launch::Player, String> {
-    let pass = launch(ep, client_id, store, accounts).map_err(|e| e.to_string())?;
+    let pass = launch(ep, client_id, store, accounts).ok();
     let kept = || {
         let order = accounts.selected().into_iter().chain(&accounts.accounts);
         order
             .into_iter()
             .find_map(|a| Some((a.clone(), secrets_in(store, &a.uuid).filter(|s| s.owns)?)))
     };
-    let (account, secrets) = pass
-        .session
-        .or(pass.owner)
-        .or_else(kept)
-        .ok_or_else(|| NoOwner.to_string())?;
-    Ok(crate::java_launch::Player {
-        name: account.name,
-        uuid: account.uuid,
-        token: secrets.minecraft_token,
-        xuid: secrets.xuid.unwrap_or_default(),
-    })
+    if let Some((account, secrets)) = pass.as_ref().and_then(|p| p.session.clone().or(p.owner.clone())).or_else(kept) {
+        return Ok(crate::java_launch::Player {
+            name: account.name,
+            uuid: account.uuid,
+            token: secrets.minecraft_token,
+            xuid: secrets.xuid.unwrap_or_default(),
+        });
+    }
+    if let Some(name) = accounts.name_arg() {
+        return Ok(crate::java_launch::Player {
+            name: name.to_string(),
+            uuid: "00000000000000000000000000000000".to_string(),
+            token: "0".to_string(),
+            xuid: String::new(),
+        });
+    }
+    Err(NoOwner.to_string())
 }
 
 #[cfg(test)]

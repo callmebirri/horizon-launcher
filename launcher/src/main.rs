@@ -711,10 +711,6 @@ impl Launcher {
                             self.step_aside(cx);
                         }
                         Err(e) => {
-                            if e == account::NoOwner.to_string() {
-                                self.owner = Some(false);
-                                self.owner_screen_open = true;
-                            }
                             self.client_error = Some(e);
                         }
                     }
@@ -725,8 +721,6 @@ impl Launcher {
                         let (file, offline) = match session {
                             Ok(pass) => pass,
                             Err(account::NoOwner) => {
-                                self.owner = Some(false);
-                                self.owner_screen_open = true;
                                 self.client_error = Some(format!("{}.", tr(account::NEEDS_OWNER)));
                                 self.starting_pack = None;
                                 self.joining = None;
@@ -1694,13 +1688,14 @@ enum PlayPress {
     Nothing,
 }
 
-/// `owner`: whether an account here owns the game, by the keychain (`Launcher::owner`).
-fn play_press(prepared: bool, owner: Option<bool>, busy: bool) -> PlayPress {
-    match (prepared, owner) {
-        _ if busy => PlayPress::Nothing,
-        (true, _) => PlayPress::Play,
-        (false, Some(true)) => PlayPress::PrepareThenPlay,
-        (false, _) => PlayPress::Nothing,
+/// What the Play button does for the selected version.
+fn play_press(prepared: bool, _owner: Option<bool>, busy: bool) -> PlayPress {
+    if busy {
+        PlayPress::Nothing
+    } else if prepared {
+        PlayPress::Play
+    } else {
+        PlayPress::PrepareThenPlay
     }
 }
 
@@ -4605,8 +4600,8 @@ mod tests {
             play_press(false, Some(true), false),
             PlayPress::PrepareThenPlay
         );
-        assert_eq!(play_press(false, Some(false), false), PlayPress::Nothing);
-        assert_eq!(play_press(false, None, false), PlayPress::Nothing);
+        assert_eq!(play_press(false, Some(false), false), PlayPress::PrepareThenPlay);
+        assert_eq!(play_press(false, None, false), PlayPress::PrepareThenPlay);
         assert_eq!(play_press(false, Some(true), true), PlayPress::Nothing);
         assert_eq!(play_press(true, Some(true), true), PlayPress::Nothing);
     }

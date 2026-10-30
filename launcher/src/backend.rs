@@ -2214,11 +2214,9 @@ pub fn need_prepared(tag: &str) -> Result<(), String> {
     }
 }
 
-/// The client's command, once the owner gate lets it start and its resources are prepared. Past
-/// the gate, a sign-in that can't be renewed (no network, expired) still lets the game start,
-/// offline.
+/// The client's command, once its resources are prepared.
 pub fn client(tag: &str) -> Result<Command, String> {
-    let (session, offline) = account::session_for_game(&game_home(), false)
+    let (session, offline) = account::session_for_game(&game_home(), true)
         .map_err(|refused| format!("{refused} Sign in with `horizon-launcher account sign-in`."))?;
     need_prepared(tag)?;
     complete_assets(tag);
@@ -2233,6 +2231,11 @@ pub fn client(tag: &str) -> Result<Command, String> {
     if let Some(e) = account::take_unsaved() {
         eprintln!("{e}");
     }
+    let accounts = account::Accounts::load();
+    if let Some(name) = accounts.name_arg() {
+        cmd.arg("--name").arg(name);
+    }
+    cmd.envs(accounts.look_env());
     append_game_args(&mut cmd);
     Ok(cmd)
 }

@@ -670,7 +670,7 @@ enum Cmd {
         #[arg(long)]
         version: Option<String>,
     },
-    /// Start the client (needs a signed-in Microsoft account that owns Minecraft: Java Edition)
+    /// Start the client
     Play {
         #[arg(long)]
         version: Option<String>,
@@ -1635,8 +1635,7 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 }));
             } else if accounts.accounts.is_empty() && accounts.offline.is_empty() {
                 println!(
-                    "No Microsoft account signed in. Play needs one that owns Minecraft: Java \
-                     Edition: horizon-launcher account sign-in"
+                    "No account signed in. Playing offline (`account offline NAME` to set an offline name)."
                 );
             } else {
                 for a in &accounts.accounts {
@@ -1655,9 +1654,6 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                     println!(
                         "Playing offline as the game's own name (`account select NAME` to switch)."
                     );
-                }
-                if !accounts.has_owner(account::store()) {
-                    println!("{}.", account::NEEDS_OWNER);
                 }
             }
         }
