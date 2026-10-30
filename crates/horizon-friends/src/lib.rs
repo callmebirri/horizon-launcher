@@ -181,7 +181,9 @@ mod tests {
         assert_eq!(ended.read(&mut [0u8; 1]).unwrap(), 0);
         #[cfg(windows)]
         {
-            ended.set_read_timeout(Some(Duration::from_millis(500))).unwrap();
+            ended
+                .set_read_timeout(Some(Duration::from_millis(500)))
+                .unwrap();
             let res = ended.read(&mut [0u8; 1]);
             assert!(
                 matches!(res, Ok(0))
