@@ -35,9 +35,8 @@ The opening, then Play ([clip](docs/opening.webm)):
   instead, and an install that lacks the version falls back to the download. **Play** on a version
   not prepared yet does it all for an owner, as the official launcher does: it prepares from the
   install when there is one, else downloads (with Mojang's Java when no Java 25 is installed), then
-  starts the game. With no install on the computer the Play page offers the download alone and the
-  Minecraft folder row says none is needed. Without an owner,
-  the Play page asks to sign in first. `horizon-launcher prepare --download`.
+  starts the game. With no install on the computer the Play page offers the download for an owner, or
+  prepares from an existing install on this machine. `horizon-launcher prepare`.
 - **Mods**: search Modrinth (CurseForge support is coming soon) for resource
   packs and modpacks, each marked Works, Partly or Doesn't run in
   Horizon; Java mod jars are never offered. Install puts a pack and what it needs in
@@ -139,8 +138,8 @@ The opening, then Play ([clip](docs/opening.webm)):
 - **Accounts and quick switch**: the top bar's account chip opens a menu of everyone who can play:
   each signed-in Microsoft account, the offline names the player keeps, and the name the game
   made up (`horizon-player.txt`). Picking one plays as it from the next Play. Offline names play
-  only while an account that owns the game is signed in ([Microsoft accounts](#microsoft-accounts));
-  signing the last one out keeps them, unplayable until one is back. Settings > Account
+  freely without requiring any Microsoft account; players can switch between offline names or
+  Microsoft accounts anytime. Settings > Account
   adds offline names (3 to 16 letters, digits or `_`; the game gets `--name`) and forgets them,
   skin and cape files included, and rolls the game's made-up name for a new one; the Console's
   Share log takes the names out of the log too. `horizon-launcher account offline
