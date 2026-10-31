@@ -2366,12 +2366,13 @@ pub fn horizon_update(releases: &[Release], installed: &[String]) -> Option<Rele
     newer.then(|| newest.clone())
 }
 
-/// The newest launcher release with an archive for this platform, if newer than this launcher
-/// ([`own_tag`]: a launcher from before 0.2 takes any `launcher@` release).
-pub fn launcher_update(releases: &[Release]) -> Option<Release> {
-    launcher_update_from(releases, &own_tag())
+/// The newest launcher release with an archive for this platform.
+/// Launcher updates are permanently disabled.
+pub fn launcher_update(_releases: &[Release]) -> Option<Release> {
+    None
 }
 
+#[allow(dead_code)]
 fn launcher_update_from(releases: &[Release], own: &str) -> Option<Release> {
     releases
         .iter()
@@ -2469,12 +2470,13 @@ pub fn exe_path() -> &'static Path {
     EXE.get_or_init(|| std::env::current_exe().unwrap_or_else(|_| PathBuf::from(LAUNCHER_BINARY)))
 }
 
-/// Development builds and `HORIZON_LAUNCHER_NO_SELF_UPDATE` never replace themselves.
+/// Launcher self-updating is permanently disabled.
 pub fn self_update_allowed() -> bool {
-    !cfg!(debug_assertions) && std::env::var_os("HORIZON_LAUNCHER_NO_SELF_UPDATE").is_none()
+    false
 }
 
 /// The version in `horizon-launcher --version`'s output (`horizon-launcher 0.1.5`).
+#[allow(dead_code)]
 fn parse_version_output(out: &str) -> Option<&str> {
     out.trim()
         .strip_prefix("horizon-launcher ")
@@ -2484,6 +2486,7 @@ fn parse_version_output(out: &str) -> Option<&str> {
 
 /// The version of the launcher binary now at `path`, which is not this process's once another
 /// update (the command line, another window) has replaced the file.
+#[allow(dead_code)]
 fn installed_launcher_version(path: &Path) -> Option<String> {
     let mut cmd = crate::process::command(path);
     cmd.arg("--version")
@@ -2498,6 +2501,7 @@ fn installed_launcher_version(path: &Path) -> Option<String> {
 /// binary is, and Linux answers "<path> (deleted)" once the file has been replaced, so a second
 /// update in the same run failed with "No such file or directory". Windows keeps a running
 /// binary locked, so there `self_replace` moves it aside first.
+#[allow(dead_code)]
 #[cfg(unix)]
 fn replace_binary(new: &Path, exe: &Path) -> std::io::Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -2516,6 +2520,7 @@ fn replace_binary(new: &Path, exe: &Path) -> std::io::Result<()> {
     result
 }
 
+#[allow(dead_code)]
 #[cfg(not(unix))]
 fn replace_binary(new: &Path, _exe: &Path) -> std::io::Result<()> {
     self_replace::self_replace(new)
@@ -2533,6 +2538,7 @@ pub fn app_bundle(exe: &Path) -> Option<&Path> {
         .then_some(app)
 }
 
+#[allow(dead_code)]
 /// Finds the first `*.app` folder under `dir`.
 fn find_app(dir: &Path) -> Option<PathBuf> {
     for entry in fs::read_dir(dir).ok()?.flatten() {
@@ -2616,58 +2622,19 @@ fn replace_bundle(new: &Path, app: &Path) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(dead_code)]
 #[cfg(not(target_os = "macos"))]
 fn replace_bundle(_new: &Path, _app: &Path) -> Result<(), String> {
     Err("App bundles are a macOS thing.".into())
 }
 
-/// Downloads a launcher release and puts its binary in place of this one. The running process
-/// keeps working; `restart` starts the new one. When the file there already is that release or
-/// a newer one (updated from the command line or another window), there is nothing to do.
-pub fn self_update(release: &Release, progress: impl Fn(f32)) -> Result<(), String> {
-    let (url, size) = release
-        .asset
-        .clone()
-        .ok_or("This launcher release has no build for this platform.")?;
-    let target = launcher_version(&release.tag).unwrap_or("0");
-    if installed_launcher_version(exe_path())
-        .is_some_and(|v| v != VERSION && compare_versions(&v, target).is_ge())
-    {
-        progress(1.0);
-        return Ok(());
-    }
-    let sha256 = signed_digest(&release.tag, LAUNCHER_ASSET.unwrap_or_default())?;
-    let work = data_dir().join(".launcher-update");
-    let _ = fs::remove_dir_all(&work);
-    fs::create_dir_all(&work).map_err(|e| e.to_string())?;
-    let archive = work.join("download");
-    download(&url, size, &sha256, &archive, &progress)?;
-    let unpacked = work.join("unpacked");
-    unpack(&archive, &url, &unpacked)?;
-    // A launcher inside Horizon.app replaces the whole bundle (its Info.plist, icon and
-    // signature belong with the binary); a bare binary, as older launchers are, only the binary,
-    // which the macOS archive also holds (Horizon.app/Contents/MacOS/horizon-launcher).
-    if let Some(app) = app_bundle(exe_path()) {
-        if let Some(new) = find_app(&unpacked) {
-            replace_bundle(&new, app)?;
-            let _ = fs::remove_dir_all(&work);
-            progress(1.0);
-            return Ok(());
-        }
-    }
-    let binary =
-        find_file(&unpacked, LAUNCHER_BINARY).ok_or("The download has no launcher binary.")?;
-    replace_binary(&binary, exe_path()).map_err(|e| {
-        format!(
-            "Could not replace the launcher at {}: {e}",
-            exe_path().display()
-        )
-    })?;
-    let _ = fs::remove_dir_all(&work);
-    progress(1.0);
-    Ok(())
+/// Downloads a launcher release and puts its binary in place of this one.
+/// Launcher self-updating is disabled.
+pub fn self_update(_release: &Release, _progress: impl Fn(f32)) -> Result<(), String> {
+    Err("Launcher updates are disabled.".into())
 }
 
+#[allow(dead_code)]
 fn find_file(dir: &Path, name: &str) -> Option<PathBuf> {
     for entry in fs::read_dir(dir).ok()?.flatten() {
         let path = entry.path();
@@ -3848,7 +3815,7 @@ pub fn {f}("
         );
         assert!(horizon_update(&releases, &["v2026.10.13".into()]).is_none());
         assert!(launcher_update(&[r("launcher-v0.0.1")]).is_none());
-        assert!(launcher_update(&[r("launcher@99.0.0")]).is_some());
+        assert!(launcher_update(&[r("launcher@99.0.0")]).is_none());
         assert!(launcher_update_from(&[r("launcher-v99.0.0")], "launcher-v0.16.0").is_some());
         let installed = ["v2026.10.12".to_string(), "v2026.10.1".to_string()];
         assert!(select_after_update(Some("v2026.10.12"), &installed));

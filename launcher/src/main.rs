@@ -107,6 +107,7 @@ impl Page {
 }
 
 /// The launcher's own update, as the footer and Settings show it.
+#[allow(dead_code)]
 #[derive(Clone, PartialEq)]
 enum SelfUpdate {
     Idle,
@@ -551,28 +552,9 @@ impl Launcher {
         });
     }
 
-    fn update_launcher(&mut self, release: Release) {
-        if !backend::self_update_allowed()
-            || matches!(
-                self.self_update,
-                SelfUpdate::Downloading(..) | SelfUpdate::Ready(_)
-            )
-        {
-            return;
-        }
-        let version = backend::launcher_version(&release.tag)
-            .unwrap_or_default()
-            .to_string();
-        self.self_update = SelfUpdate::Downloading(version, 0.);
-        let tx = self.tx.clone();
-        std::thread::spawn(move || {
-            let progress = |p| {
-                let _ = tx.send(Msg::LauncherProgress(p));
-            };
-            let _ = tx.send(Msg::LauncherUpdated(backend::self_update(
-                &release, progress,
-            )));
-        });
+    #[allow(dead_code)]
+    fn update_launcher(&mut self, _release: Release) {
+        // Launcher self-updates are permanently disabled
     }
 
     /// Installs the Horizon version the last check found, keeping the player's choice of
@@ -856,9 +838,6 @@ impl Launcher {
                     self.updates = *updates;
                     if self.settings.auto_install() {
                         self.install_update();
-                    }
-                    if let Some(release) = self.updates.launcher.clone() {
-                        self.update_launcher(release);
                     }
                 }
                 Msg::Updates(Err(e)) => self.update_error = Some(e),
